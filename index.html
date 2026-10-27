@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tour du Mont Blanc Route</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f5f1; --surface: #ffffff; --text: #1d1d1b; --muted: #6b6a65;
+    --border: #e2e0d9; --accent: #c2410c; --accent-soft: #fde8dc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161614; --surface: #201f1c; --text: #ecebe6; --muted: #a09e96;
+      --border: #34332e; --accent: #f97316; --accent-soft: #3a2416;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161614; --surface: #201f1c; --text: #ecebe6; --muted: #a09e96;
+    --border: #34332e; --accent: #f97316; --accent-soft: #3a2416;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 16px; font-size: .9rem; }
+  .totals { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; }
+  .stat b { display: block; font-size: 1.15rem; }
+  .stat span { color: var(--muted); font-size: .8rem; }
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px; }
+  .tab { flex: none; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; font-size: .88rem; }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .layout { display: grid; grid-template-columns: 1fr 340px; gap: 14px; }
+  @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+  #map { height: 560px; border-radius: 12px; border: 1px solid var(--border); }
+  @media (max-width: 800px) { #map { height: 420px; } }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .panel h2 { font-size: 1.1rem; margin: 0 0 4px; }
+  .panel .meta { color: var(--muted); font-size: .85rem; margin-bottom: 12px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip { background: var(--accent-soft); color: var(--accent); border-radius: 6px; padding: 3px 8px; font-size: .8rem; font-weight: 600; }
+  ol { margin: 0; padding-left: 20px; }
+  li { margin-bottom: 8px; }
+  li small { color: var(--muted); display: block; }
+  .pin { color: #fff; border: 2px solid #fff; border-radius: 999px; min-width: 34px; height: 24px; padding: 0 5px;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11.5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.45); white-space: nowrap; }
+  .pin.dim { min-width: 28px; height: 19px; font-size: 9.5px; opacity: .85; border-width: 1.5px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+  .tab.active .dot { box-shadow: 0 0 0 2px #fff; }
+  a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  a:hover { text-decoration: underline; }
+  .links { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; display: grid; gap: 8px; font-size: .9rem; }
+  .links .lbl { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; display: block; }
+  table { width: 100%; border-collapse: collapse; margin-top: 24px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: .88rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; font-weight: 700; }
+  .tablewrap { overflow-x: auto; }
+  .note { color: var(--muted); font-size: .8rem; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tour du Mont Blanc — 9-day route</h1>
+  <p class="sub">France → Italy → Switzerland → France. Hotel-to-hotel with luggage transfer.</p>
+
+  <div class="totals">
+    <div class="stat"><b>~54 mi</b><span>hiking distance</span></div>
+    <div class="stat"><b>~18,500 ft</b><span>total gain</span></div>
+    <div class="stat"><b>~17,260 ft</b><span>total descent</span></div>
+    <div class="stat"><b>8,320 ft</b><span>highest pass (Grand Col Ferret)</span></div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="layout">
+    <div id="map"></div>
+    <div class="panel" id="panel"></div>
+  </div>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Day</th><th>Route</th><th class="n">Distance</th><th class="n">Gain</th><th class="n">Descent</th><th class="n">High point</th><th>Overnight</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  </div>
+  <p class="note">Pins are approximate. Selecting a day shows the route up to that day: each day has its own color, pins are labeled day.stop (e.g. 3.2 = Day 3, second stop), and the selected day is drawn bold. Lines join stops in order and are not the actual trail. Distance, gain and descent come from the organizer's proposal; elevations are approximate standard figures.</p>
+</div>
+
+<script>
+const days = [
+  { d: 1, label: "Day 1", title: "Arrive in Chamonix valley", info: "Meet group, gear check. Overnight Hotel Rocky Pop, Les Houches. No meals included.",
+    stops: [["Les Houches", 45.8906, 6.7980, "~3,300 ft · overnight"]] },
+  { d: 2, label: "Day 2", title: "Les Houches → Les Contamines", mi: 6.8, up: 2000, down: 4040, high: "Col de Tricot ~6,960 ft", hrs: "6.5 h",
+    info: "Train to Les Houches, Bellevue cable car up (~€19, not included). Overnight Hotel Dôme de Miage.",
+    stops: [["Bellevue cable car top", 45.884, 6.775, "~5,900 ft · start"], ["Col de Tricot", 45.866, 6.790, "~6,960 ft · high point"], ["Les Contamines-Montjoie", 45.8217, 6.7275, "~3,840 ft · overnight"]] },
+  { d: 3, label: "Day 3", title: "Over the Bonhomme cols", mi: 8.7, up: 4230, down: 2030, high: "Croix du Bonhomme ~8,140 ft", hrs: "6.5 h",
+    info: "Biggest climb of the trip. Taxi from Les Chapieux. Overnight Hotel Angival, Bourg-Saint-Maurice.",
+    stops: [["Les Contamines", 45.8217, 6.7275, "~3,840 ft · start"], ["Col du Bonhomme", 45.729, 6.713, "~7,640 ft"], ["Col de la Croix du Bonhomme", 45.7207, 6.727, "~8,140 ft · high point"], ["Les Chapieux", 45.6967, 6.7375, "~5,090 ft · end of hike"], ["Bourg-Saint-Maurice", 45.6186, 6.769, "~2,760 ft · overnight (taxi)"]] },
+  { d: 4, label: "Day 4", title: "Into Italy", mi: 10.3, up: 3120, down: 2490, high: "Col de la Seigne ~8,250 ft", hrs: "6.5 h",
+    info: "Taxi to Ville des Glaciers, over the Italian border, bus to Courmayeur. Overnight Hotel Croux.",
+    stops: [["Ville des Glaciers", 45.700, 6.799, "~5,870 ft · start"], ["Col de la Seigne", 45.7475, 6.8075, "~8,250 ft · high point, border"], ["Val Veny", 45.765, 6.854, "end of hike, bus"], ["Courmayeur", 45.7967, 6.9724, "~4,020 ft · overnight"]] },
+  { d: 5, label: "Day 5", title: "Rest day in Courmayeur", info: "Pré-Saint-Didier spa or Skyway Monte Bianco (up to ~11,370 ft). Breakfast only.",
+    stops: [["Courmayeur", 45.7967, 6.9724, "~4,020 ft · rest day"]] },
+  { d: 6, label: "Day 6", title: "Into Switzerland", mi: 6.2, up: 2460, down: 2430, high: "Grand Col Ferret ~8,320 ft", hrs: "6 h",
+    info: "Bus to Arnouva, over the Swiss border, transfer to Champex-Lac. Overnight Hotel Sunways.",
+    stops: [["Arnouva", 45.863, 7.025, "~5,810 ft · start"], ["Grand Col Ferret", 45.8925, 7.0533, "~8,320 ft · high point, border"], ["La Fouly", 45.933, 7.096, "end of hike, transfer"], ["Champex-Lac", 46.029, 7.115, "~4,810 ft · overnight"]] },
+  { d: 7, label: "Day 7", title: "Champex → Trient", mi: 9.9, up: 2530, down: 3080, high: "Bovine ~6,530 ft", hrs: "7.25 h",
+    info: "Balcony trail via Bovine, taxi to Martigny. Overnight Campanile Martigny.",
+    stops: [["Champex-Lac", 46.029, 7.115, "~4,810 ft · start"], ["Bovine", 46.048, 7.059, "~6,530 ft · high point"], ["Col de la Forclaz", 46.059, 7.002, "~5,000 ft"], ["Trient", 46.056, 6.995, "~4,200 ft · end of hike"], ["Martigny", 46.100, 7.073, "~1,540 ft · overnight (taxi)"]] },
+  { d: 8, label: "Day 8", title: "Back to France", mi: 8.7, up: 3220, down: 2660, high: "Col de Balme ~7,190 ft", hrs: "7.5 h",
+    info: "Taxi to Trient, over Col de Balme, bus from Le Tour. Overnight Chamonix or Les Houches.",
+    stops: [["Trient", 46.056, 6.995, "~4,200 ft · start"], ["Col de Balme", 46.0277, 6.9608, "~7,190 ft · high point, border"], ["Le Tour", 45.993, 6.942, "~4,760 ft · end of hike"], ["Chamonix", 45.9237, 6.8694, "~3,400 ft · overnight (bus)"]] },
+  { d: 9, label: "Day 9", title: "Flégère → Planpraz", mi: 3.4, up: 950, down: 530, high: "Planpraz ~6,560 ft", hrs: "2.5 h",
+    info: "Gondola up and down (not included). Replaces Lac Blanc.",
+    stops: [["La Flégère", 45.962, 6.893, "~6,150 ft · gondola up"], ["Planpraz", 45.9376, 6.8478, "~6,560 ft · gondola down"]] },
+  { d: 10, label: "Day 10", title: "Departure", info: "Breakfast only.",
+    stops: [["Chamonix", 45.9237, 6.8694, "departure"]] }
+];
+
+const STAYS = {
+  1: ["Hotel Rocky Pop, Les Houches", "https://www.rockypop.com/chamonix/"],
+  2: ["Hotel Dômes de Miage, Les Contamines", "https://www.domesdemiage.com/"],
+  3: ["Hotel Angival, Bourg-Saint-Maurice", "https://angival.com/"],
+  4: ["Hotel Croux, Courmayeur", "https://www.hotelcroux.it/"],
+  5: ["Hotel Croux, Courmayeur", "https://www.hotelcroux.it/"],
+  6: ["Hotel Sunways, Champex-Lac", "https://www.sunways.ch/"],
+  7: ["Campanile, Martigny", "https://martigny.campanile.com/fr-fr/"],
+  8: ["Hotel Rocky Pop (Chamonix / Les Houches)", "https://www.rockypop.com/chamonix/"],
+  9: ["Hotel Rocky Pop (Chamonix / Les Houches)", "https://www.rockypop.com/chamonix/"]
+};
+const TRACKS = {
+  2: "https://www.komoot.fr/tour/957599408?share_token=aWdWIHNjYA4IwN4A4l36aSfzjkeTirVVXuXZ8TWXkXXKDhfQaB&ref=wtd",
+  3: "https://www.komoot.com/fr-fr/tour/3345425114?share_token=aCfb2zWwz5DcODj5krg6GfyTdMtBrphWo0PHmTPGrjMScOS9Dh&ref=wtd",
+  4: "https://www.komoot.com/fr-fr/tour/2691697989?share_token=a6VhnmVLCccz1FT1nNSbsUQYfg0crg5vs478mXBKlfgEE5HR1C&ref=wtd",
+  6: "https://www.komoot.com/fr-fr/tour/1891013792?share_token=a6pnTrr8w3c067CygoQPbl1Plycx65hcJcm4iDyubRwttI800a&ref=wtd",
+  7: "https://www.komoot.com/fr-fr/tour/1891034425?share_token=aEYBqExWWrx76AdBhDacOZnyydIwQuVjD3AHg7oP7MPRSYwLxw&ref=wtd",
+  8: "https://www.komoot.com/fr-fr/tour/1891047036?share_token=ar4ZxJFcvd6t0ewRH01IkidnZPFU5FH9HJFzGaXeqMeSaRddTg&ref=wtd",
+  9: "https://www.komoot.com/fr-fr/tour/3356569904?share_token=aaAnSybKMYgYXerr7vhPiPuzy1336KnU37c9yrJES8Z2m9JxY6&ref=wtd"
+};
+const EXTRAS = {
+  5: [["QC Terme Pré-Saint-Didier spa", "https://www.qcterme.com/it/destinazioni/pre-saint-didier/qc-spa-pre-saint-didier/orari-e-prezzi-ps"],
+      ["Skyway Monte Bianco", "https://www.montebianco.com/en"]]
+};
+const ext = (url, text) => `<a href="${url}" target="_blank" rel="noopener">${text} ↗</a>`;
+
+const map = L.map("map", { scrollWheelZoom: false });
+L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+  maxZoom: 16, attribution: 'Map data © OpenStreetMap contributors, SRTM | Style © OpenTopoMap'
+}).addTo(map);
+
+const all = days.flatMap(d => d.stops.map(s => [s[1], s[2]]));
+let layer = L.layerGroup().addTo(map);
+const fmt = n => n.toLocaleString("en-US");
+const COLORS = ["#e11d48","#ea580c","#ca8a04","#16a34a","#0d9488","#0284c7","#4f46e5","#9333ea","#c026d3","#475569"];
+const icon = (t, dim, color) => L.divIcon({ className: "", html: `<div class="pin${dim ? " dim" : ""}" style="background:${color}">${t}</div>`,
+  iconSize: dim ? [30, 19] : [38, 24], iconAnchor: dim ? [15, 10] : [19, 12] });
+
+function linksHtml(d) {
+  const parts = [];
+  if (STAYS[d]) parts.push(`<div><span class="lbl">Overnight</span>🏨 ${ext(STAYS[d][1], STAYS[d][0])} <small style="color:var(--muted)">or equivalent</small></div>`);
+  if (TRACKS[d]) parts.push(`<div><span class="lbl">Trail</span>🥾 ${ext(TRACKS[d], "View route on Komoot")}</div>`);
+  if (EXTRAS[d]) parts.push(`<div><span class="lbl">Options</span>${EXTRAS[d].map(e => ext(e[1], e[0])).join("<br>")}</div>`);
+  return parts.length ? `<div class="links" style="margin:0 0 12px;border-top:0;padding-top:0">${parts.join("")}</div>` : "";
+}
+
+function show(i) {
+  document.querySelectorAll(".tab").forEach((t, j) => t.classList.toggle("active", j === i));
+  layer.clearLayers();
+  const day = days[i];
+  const pts = [];
+  let prevEnd = null;
+  days.slice(0, i + 1).forEach((dd, j) => {
+    const color = COLORS[j % COLORS.length], cur = j === i;
+    const seg = (prevEnd ? [prevEnd] : []).concat(dd.stops.map(s => [s[1], s[2]]));
+    if (seg.length > 1) L.polyline(seg, { color, weight: cur ? 5 : 3.5, opacity: cur ? 1 : .8, dashArray: cur ? null : "6 5" }).addTo(layer);
+    dd.stops.forEach((s, k) => {
+      pts.push([s[1], s[2]]);
+      L.marker([s[1], s[2]], { icon: icon(`${dd.d}.${k + 1}`, !cur, color), zIndexOffset: cur ? 1000 : j * 10 })
+        .bindPopup(`<b>${dd.d}.${k + 1} ${s[0]}</b><br>${dd.label} · ${s[3]}` + (k === dd.stops.length - 1 && STAYS[dd.d] && dd.d !== 9 ? `<br>🏨 ${ext(STAYS[dd.d][1], STAYS[dd.d][0])}` : "")).addTo(layer);
+    });
+    prevEnd = seg[seg.length - 1];
+  });
+  if (pts.length > 1) map.fitBounds(pts, { padding: [40, 40], maxZoom: 13 }); else map.setView(pts[0], 12);
+
+  const chips = day.mi ? `<div class="chips"><span class="chip">${day.mi} mi</span><span class="chip">↑ ${fmt(day.up)} ft</span><span class="chip">↓ ${fmt(day.down)} ft</span><span class="chip">${day.hrs}</span></div>` : "";
+  document.getElementById("panel").innerHTML =
+    `<h2>${day.label}: ${day.title}</h2><div class="meta">${day.info}</div>${chips}
+     ${linksHtml(day.d)}<ol style="list-style:none;padding:0">${day.stops.map((s,k) => `<li><span class="dot" style="background:${COLORS[i]}"></span><b>${day.d}.${k+1}</b> ${s[0]}<small style="margin-left:16px">${s[3]}</small></li>`).join("")}</ol>`;
+}
+
+const tabs = document.getElementById("tabs");
+days.forEach((d, i) => {
+  const b = document.createElement("button");
+  b.className = "tab"; b.innerHTML = `<span class="dot" style="background:${COLORS[i]}"></span>${d.label}`; b.onclick = () => show(i);
+  tabs.appendChild(b);
+});
+
+const tb = document.getElementById("tbody");
+let tm = 0, tu = 0, td = 0;
+days.filter(d => d.mi).forEach(d => {
+  tm += d.mi; tu += d.up; td += d.down;
+  tb.insertAdjacentHTML("beforeend", `<tr><td><span class="dot" style="background:${COLORS[d.d-1]}"></span>${d.d}</td><td>${d.title}</td><td class="n">${d.mi} mi</td><td class="n">${fmt(d.up)} ft</td><td class="n">${fmt(d.down)} ft</td><td class="n">${d.high}</td><td>${STAYS[d.d] ? ext(STAYS[d.d][1], STAYS[d.d][0].split(/[,(]/)[0].trim()) : ""}</td></tr>`);
+});
+tb.insertAdjacentHTML("beforeend", `<tr><td></td><td>Total</td><td class="n">~54 mi</td><td class="n">~18,500 ft</td><td class="n">~17,260 ft</td><td></td><td></td></tr>`);
+
+map.fitBounds(all, { padding: [30, 30] });
+show(0);
+</script>
+</body>
+</html>
