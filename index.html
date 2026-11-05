@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tour du Mont Blanc Route</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f5f1; --surface: #ffffff; --text: #1d1d1b; --muted: #6b6a65;
+    --border: #e2e0d9; --accent: #c2410c; --accent-soft: #fde8dc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161614; --surface: #201f1c; --text: #ecebe6; --muted: #a09e96;
+      --border: #34332e; --accent: #f97316; --accent-soft: #3a2416;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161614; --surface: #201f1c; --text: #ecebe6; --muted: #a09e96;
+    --border: #34332e; --accent: #f97316; --accent-soft: #3a2416;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 16px; font-size: .9rem; }
+  .totals { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; }
+  .stat b { display: block; font-size: 1.15rem; }
+  .stat span { color: var(--muted); font-size: .8rem; }
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px; }
+  .tab { flex: none; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; font-size: .88rem; }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .layout { display: grid; grid-template-columns: 1fr 340px; gap: 14px; }
+  @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+  #map { height: 560px; border-radius: 12px; border: 1px solid var(--border); }
+  @media (max-width: 800px) { #map { height: 420px; } }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .panel h2 { font-size: 1.1rem; margin: 0 0 4px; }
+  .panel .meta { color: var(--muted); font-size: .85rem; margin-bottom: 12px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip { background: var(--accent-soft); color: var(--accent); border-radius: 6px; padding: 3px 8px; font-size: .8rem; font-weight: 600; }
+  ol { margin: 0; padding-left: 20px; }
+  li { margin-bottom: 8px; }
+  li small { color: var(--muted); display: block; }
+  .pin { color: #fff; border: 2px solid #fff; border-radius: 999px; min-width: 34px; height: 24px; padding: 0 5px;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11.5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.45); white-space: nowrap; }
+  .pin.dim { min-width: 28px; height: 19px; font-size: 9.5px; opacity: .85; border-width: 1.5px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+  .tab.active .dot { box-shadow: 0 0 0 2px #fff; }
+  a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  a:hover { text-decoration: underline; }
+  .flag { display: inline-block; width: 21px; height: 14px; border-radius: 2px; vertical-align: -2px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.18); overflow: hidden; flex: none; }
+  .country { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin: 8px 0 12px; font-weight: 600; font-size: .92rem; }
+  .country .flag { width: 30px; height: 20px; }
+  .country .arrow { color: var(--muted); font-weight: 400; }
+  .cost { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 12px; }
+  @media (max-width: 420px) { .cost { grid-template-columns: 1fr; } }
+  .cost > div { border-radius: 8px; padding: 8px 10px; font-size: .84rem; }
+  .cost .inc { background: rgba(22,163,74,.10); border: 1px solid rgba(22,163,74,.35); }
+  .cost .exc { background: rgba(220,38,38,.08); border: 1px solid rgba(220,38,38,.35); }
+  .cost h3 { margin: 0 0 4px; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+  .cost .inc h3 { color: #16a34a; } .cost .exc h3 { color: #dc2626; }
+  .cost ul { margin: 0; padding: 0; list-style: none; }
+  .cost li { margin: 0 0 3px; padding-left: 16px; position: relative; }
+  .cost .inc li::before { content: "✓"; position: absolute; left: 0; color: #16a34a; font-weight: 700; }
+  .cost .exc li::before { content: "✕"; position: absolute; left: 0; color: #dc2626; font-weight: 700; }
+  .cost li small { display: inline; color: var(--muted); }
+  .tabs .flag { width: 15px; height: 10px; margin-left: 4px; vertical-align: 0; }
+  .table-flags .flag { width: 18px; height: 12px; margin-right: 2px; }
+  .thumbs { display: flex; gap: 6px; margin: 6px 0 4px 16px; overflow-x: auto; min-height: 0; }
+  .thumbs img, .pthumb img { border-radius: 6px; object-fit: cover; cursor: zoom-in; background: var(--border); }
+  .thumbs img { width: 92px; height: 64px; flex: none; }
+  .thumbs .none { color: var(--muted); font-size: .75rem; }
+  .pthumb img { width: 220px; height: 140px; display: block; margin-top: 6px; }
+  .pthumb .cr, .lb .cr { font-size: 10.5px; color: #777; }
+  .lb { position: fixed; inset: 0; background: rgba(0,0,0,.88); display: none; align-items: center; justify-content: center;
+    flex-direction: column; z-index: 2000; padding: 16px; }
+  .lb.on { display: flex; }
+  .lb img { max-width: 100%; max-height: 80vh; border-radius: 8px; }
+  .lb .cap { color: #eee; margin-top: 10px; font-size: .9rem; text-align: center; max-width: 900px; }
+  .lb .cap a { color: #fdba74; }
+  .lb .x { position: absolute; top: 10px; right: 16px; color: #fff; font-size: 30px; background: none; border: 0; cursor: pointer; }
+  .mapwrap { position: relative; min-width: 0; align-self: start; }
+  .gal { position: absolute; inset: 0; z-index: 1000; background: rgba(12,12,10,.94); border-radius: 12px;
+    display: none; flex-direction: column; overflow: hidden; }
+  .gal.on { display: flex; }
+  .gal-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: #fff; }
+  .gal-head b { font-size: 1rem; }
+  .gal-count { color: #bbb; font-size: .85rem; }
+  .gal-x { margin-left: auto; background: rgba(255,255,255,.12); border: 0; color: #fff; font-size: 22px; width: 34px; height: 34px;
+    border-radius: 50%; cursor: pointer; line-height: 1; }
+  .gal-strip { flex: none; height: calc(100% - 54px); display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; gap: 0; min-height: 0; }
+  .gal-slide { flex: 0 0 100%; scroll-snap-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 0 48px 12px; height: 100%; min-height: 0; }
+  .gal-slide .ph { flex: 1 1 0; min-height: 0; width: 100%; }
+  .gal-slide img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .gal-slide .cap { color: #ddd; font-size: .8rem; text-align: center; margin-top: 8px; max-width: 640px; }
+  .gal-slide .cap a { color: #fdba74; }
+  .gal-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,.15); color: #fff; border: 0;
+    width: 38px; height: 38px; border-radius: 50%; font-size: 26px; line-height: 1; cursor: pointer; }
+  .gal-nav.prev { left: 8px; } .gal-nav.next { right: 8px; }
+  .gal-nav[hidden] { display: none; }
+  .gal-hide { background: none; border: 1px solid rgba(255,255,255,.35); color: #ddd; border-radius: 999px; padding: 1px 9px;
+    font: inherit; font-size: .75rem; cursor: pointer; }
+  .gal-hide:hover { background: rgba(255,255,255,.12); }
+  @media (max-width: 600px) { .gal-slide { padding: 0 8px 10px; } .gal-nav { display: none; } }
+  .pthumb { cursor: pointer; }
+  .pthumb .more { display: inline-block; margin-top: 6px; font-weight: 600; color: var(--accent); font-size: 12.5px; }
+  .views { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin: 0 0 14px; }
+  .view { background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -2px; padding: 10px 16px;
+    font: inherit; font-weight: 600; font-size: 1rem; color: var(--muted); cursor: pointer; }
+  .view.on { color: var(--text); border-bottom-color: var(--accent); }
+  .view:hover { color: var(--text); }
+  #view-data table { margin-top: 10px; }
+  #view-data tbody tr[data-i] { cursor: pointer; }
+  #view-data tbody tr[data-i]:hover td { background: var(--accent-soft); }
+  @media (max-width: 480px) { .view { padding: 10px 10px; font-size: .92rem; } }
+  .gear-badge { font-size: .75rem; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
+  .gear-badge:empty { display: none; }
+  .gear-top { display: flex; align-items: center; gap: 16px; margin: 0 0 14px; }
+  .gear-top > div { flex: 1; }
+  .bar { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; margin-top: 6px; }
+  #gear-bar { height: 100%; width: 0; background: #16a34a; transition: width .25s; }
+  .gbtn { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: .85rem; cursor: pointer; }
+  .gbtn:hover { border-color: var(--accent); }
+  .gear-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .gear-cols { grid-template-columns: 1fr; } }
+  .gcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .gcard h3 { margin: 0 0 2px; font-size: 1.02rem; }
+  .gcard .gsub { color: var(--muted); font-size: .82rem; margin-bottom: 8px; }
+  .gcard .gcount { float: right; color: var(--muted); font-size: .82rem; font-weight: 600; }
+  .gitem { display: flex; align-items: flex-start; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .gitem:last-of-type { border-bottom: 0; }
+  .gitem input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: #16a34a; flex: none; cursor: pointer; }
+  .gitem span { flex: 1; }
+  .gitem.done span { color: var(--muted); text-decoration: line-through; }
+  .gitem .tag { flex: none; font-size: .7rem; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 6px; }
+  .gitem .del { flex: none; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; }
+  .gadd { display: flex; gap: 6px; margin-top: 10px; }
+  .gadd input { flex: 1; min-width: 0; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 8px; padding: 6px 10px; font: inherit; font-size: .88rem; }
+  .gear-rules { margin-top: 14px; background: var(--accent-soft); border-radius: 12px; padding: 12px 16px; font-size: .88rem; }
+  .gear-rules h3 { margin: 0 0 6px; font-size: .95rem; }
+  .gear-rules ul { margin: 0; padding-left: 18px; }
+  .photo-toggle { background: var(--surface); color: var(--text); border: 2px solid rgba(0,0,0,.2); border-radius: 999px;
+    padding: 5px 12px 5px 9px; font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+    display: flex; align-items: center; gap: 6px; }
+  .photo-toggle .pt-state { background: #16a34a; color: #fff; border-radius: 999px; padding: 0 8px; font-size: .75rem; }
+  .photo-toggle.off { color: var(--muted); }
+  .photo-toggle.off .pt-icon { filter: grayscale(1); opacity: .6; }
+  .photo-toggle.off .pt-state { background: #8a8780; }
+  .links { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; display: grid; gap: 8px; font-size: .9rem; }
+  .links .lbl { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; display: block; }
+  table { width: 100%; border-collapse: collapse; margin-top: 24px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: .88rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; font-weight: 700; }
+  .tablewrap { overflow-x: auto; }
+  .note { color: var(--muted); font-size: .8rem; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tour du Mont Blanc — 20 June to 1 July 2027</h1>
+  <p class="sub">France → Italy → Switzerland → France. Hotel-to-hotel with luggage transfer. Arrive Sun 20 Jun, hiking 22–29 Jun, depart Thu 1 Jul 2027.</p>
+
+  <div class="totals">
+    <div class="stat"><b>~54 mi</b><span>hiking distance</span></div>
+    <div class="stat"><b>~18,500 ft</b><span>total gain</span></div>
+    <div class="stat"><b>~17,260 ft</b><span>total descent</span></div>
+    <div class="stat"><b>€3,196</b><span>per person · 2 guides · min. 13 people</span></div>
+    <div class="stat"><b>8,320 ft</b><span>highest pass (Grand Col Ferret)</span></div>
+  </div>
+
+  <div class="views" role="tablist">
+    <button class="view on" role="tab" data-view="map" aria-selected="true">🗺️ Day to Day Map</button>
+    <button class="view" role="tab" data-view="data" aria-selected="false">📊 Hiking days data</button>
+    <button class="view" role="tab" data-view="gear" aria-selected="false">🎒 Gear checklist <span class="gear-badge" id="gear-badge"></span></button>
+  </div>
+
+  <section id="view-map">
+  <div class="tabs" id="tabs"></div>
+  <div class="legend" style="display:flex;gap:18px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin:0 0 10px">
+    <span><svg width="34" height="10"><line x1="3" y1="5" x2="31" y2="5" stroke="#fff" stroke-width="9" stroke-linecap="round"/><line x1="3" y1="5" x2="31" y2="5" stroke="#e600ff" stroke-width="5" stroke-linecap="round"/></svg> Hiking trail</span>
+    <span><svg width="34" height="10"><line x1="3" y1="5" x2="31" y2="5" stroke="#0047ff" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="1 8"/></svg> Taxi / bus / lift</span>
+  </div>
+  <div class="layout">
+    <div class="mapwrap"><div id="map"></div>
+      <div class="gal" id="gal" aria-hidden="true">
+        <div class="gal-head"><b class="gal-title"></b><span class="gal-count"></span><button class="gal-x" aria-label="Close">×</button></div>
+        <div class="gal-strip"></div>
+        <button class="gal-nav prev" aria-label="Previous">‹</button><button class="gal-nav next" aria-label="Next">›</button>
+      </div>
+    </div>
+    <div class="panel" id="panel"></div>
+  </div>
+  </section>
+
+  <section id="view-data" hidden>
+  <p class="sub" style="margin:0 0 4px">Hiking days only (rest, arrival and departure days are left out). Tap a row to see that day on the map.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Day</th><th>Country</th><th>Route</th><th class="n">Distance</th><th class="n">Gain</th><th class="n">Descent</th><th class="n">High point</th><th>Overnight</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  </div>
+  </section>
+  <section id="view-gear" hidden>
+    <div class="gear-top">
+      <div><b id="gear-progress">0 of 0 packed</b><div class="bar"><div id="gear-bar"></div></div></div>
+      <button class="gbtn" id="gear-reset">Uncheck all</button>
+    </div>
+    <div class="gear-cols" id="gear-cols"></div>
+    <div class="gear-rules">
+      <h3>Duffel bag rules for the luggage transfer</h3>
+      <ul>
+        <li>Soft bag only, no suitcases</li>
+        <li><b>15 kg (33 lb) maximum, strictly enforced</b></li>
+        <li>No valuables, money, food, drinks, medicines, documents, fragile items or electronics; keep these in your daypack</li>
+        <li>Bags ready by 8:00 AM, delivered around 5:30 PM</li>
+      </ul>
+    </div>
+    <p class="note">Ticks are saved in this browser on this device only. The list comes from the organizer's proposal; items marked "added" are your own.</p>
+  </section>
+
+  <p class="note" id="map-note">Pins are approximate. Selecting a day shows the route up to that day: each day has its own color, pins are labeled day.stop (e.g. 3.2 = Day 3, second stop), and the selected day is drawn bold. Solid lines follow hiking paths from OpenStreetMap, routed through each day's stops (approximate; the guide may take variants). Magenta lines are hiking trails; blue dotted lines are taxi, bus or lift links. Pin colors still mark the day. Tap a dot to see a photo; tap the photo to browse more over the map. Photos are pulled live from Wikimedia Commons (geotagged photos taken within ~1 mile of each point, closest first), so they're representative, not guaranteed to show the exact spot. Distance, gain and descent come from the organizer's proposal; elevations are approximate standard figures.</p>
+</div>
+
+<script>
+const days = [
+  { d: 0, label: "Day 0", date: "Sun 20 Jun", title: "Arrive in Chamonix", info: "Arrival day. Hotel night included; no meals.",
+    stops: [["Chamonix", 45.9237, 6.8694, "~3,400 ft · overnight"]] },
+  { d: 1, label: "Day 1", date: "Mon 21 Jun", title: "Meet the group in Chamonix", info: "Meet group, gear check. No meals included.",
+    stops: [["Chamonix", 45.9237, 6.8694, "~3,400 ft · overnight"]] },
+  { d: 2, label: "Day 2", date: "Tue 22 Jun", title: "Les Houches → Les Contamines", mi: 6.8, up: 2000, down: 4040, high: "Col de Tricot ~6,960 ft", hrs: "6.5 h",
+    info: "Train to Les Houches, Bellevue cable car up (~€19, not included). Overnight Hotel Chemenaz.",
+    stops: [["Bellevue cable car top", 45.884, 6.775, "~5,900 ft · start"], ["Col de Tricot", 45.866, 6.790, "~6,960 ft · high point"], ["Les Contamines-Montjoie", 45.8217, 6.7275, "~3,840 ft · overnight"]] },
+  { d: 3, label: "Day 3", date: "Wed 23 Jun", title: "Over the Bonhomme cols", mi: 8.7, up: 4230, down: 2030, high: "Croix du Bonhomme ~8,140 ft", hrs: "6.5 h",
+    info: "Biggest climb of the trip. Taxi from Les Chapieux. Overnight Hotel Base Camp Lodge, Bourg-Saint-Maurice.",
+    stops: [["Les Contamines", 45.8217, 6.7275, "~3,840 ft · start"], ["Col du Bonhomme", 45.729, 6.713, "~7,640 ft"], ["Col de la Croix du Bonhomme", 45.7207, 6.727, "~8,140 ft · high point"], ["Les Chapieux", 45.6967, 6.7375, "~5,090 ft · end of hike"], ["Bourg-Saint-Maurice", 45.6186, 6.769, "~2,760 ft · overnight (taxi)"]] },
+  { d: 4, label: "Day 4", date: "Thu 24 Jun", title: "Into Italy", mi: 10.3, up: 3120, down: 2490, high: "Col de la Seigne ~8,250 ft", hrs: "6.5 h",
+    info: "Taxi to Ville des Glaciers, over the Italian border, bus to Courmayeur. Overnight Hotel Croux.",
+    stops: [["Ville des Glaciers", 45.700, 6.799, "~5,870 ft · start"], ["Col de la Seigne", 45.7475, 6.8075, "~8,250 ft · high point, border"], ["Val Veny", 45.765, 6.854, "end of hike, bus"], ["Courmayeur", 45.7967, 6.9724, "~4,020 ft · overnight"]] },
+  { d: 5, label: "Day 5", date: "Fri 25 Jun", title: "Rest day in Courmayeur", info: "Pré-Saint-Didier spa or Skyway Monte Bianco (up to ~11,370 ft). Breakfast only.",
+    stops: [["Courmayeur", 45.7967, 6.9724, "~4,020 ft · rest day"]] },
+  { d: 6, label: "Day 6", date: "Sat 26 Jun", title: "Into Switzerland", mi: 6.2, up: 2460, down: 2430, high: "Grand Col Ferret ~8,320 ft", hrs: "6 h",
+    info: "Bus to Arnouva, over the Swiss border, transfer to Champex-Lac. Overnight Hotel Sunways.",
+    stops: [["Arnouva", 45.863, 7.025, "~5,810 ft · start"], ["Grand Col Ferret", 45.8925, 7.0533, "~8,320 ft · high point, border"], ["La Fouly", 45.933, 7.096, "end of hike, transfer"], ["Champex-Lac", 46.029, 7.115, "~4,810 ft · overnight"]] },
+  { d: 7, label: "Day 7", date: "Sun 27 Jun", title: "Champex → Trient", mi: 9.9, up: 2530, down: 3080, high: "Bovine ~6,530 ft", hrs: "7.25 h",
+    info: "Balcony trail via Bovine, taxi to Martigny. Overnight Campanile Martigny.",
+    stops: [["Champex-Lac", 46.029, 7.115, "~4,810 ft · start"], ["Bovine", 46.048, 7.059, "~6,530 ft · high point"], ["Col de la Forclaz", 46.059, 7.002, "~5,000 ft"], ["Trient", 46.056, 6.995, "~4,200 ft · end of hike"], ["Martigny", 46.100, 7.073, "~1,540 ft · overnight (taxi)"]] },
+  { d: 8, label: "Day 8", date: "Mon 28 Jun", title: "Back to France", mi: 8.7, up: 3220, down: 2660, high: "Col de Balme ~7,190 ft", hrs: "7.5 h",
+    info: "Taxi to Trient, over Col de Balme, bus from Le Tour. Overnight in Chamonix.",
+    stops: [["Trient", 46.056, 6.995, "~4,200 ft · start"], ["Col de Balme", 46.0277, 6.9608, "~7,190 ft · high point, border"], ["Le Tour", 45.993, 6.942, "~4,760 ft · end of hike"], ["Chamonix", 45.9237, 6.8694, "~3,400 ft · overnight (bus)"]] },
+  { d: 9, label: "Day 9", date: "Tue 29 Jun", title: "Flégère → Planpraz", mi: 3.4, up: 950, down: 530, high: "Planpraz ~6,560 ft", hrs: "2.5 h",
+    info: "Gondola up and down (not included). Replaces Lac Blanc.",
+    stops: [["La Flégère", 45.962, 6.893, "~6,150 ft · gondola up"], ["Planpraz", 45.9376, 6.8478, "~6,560 ft · gondola down"]] },
+  { d: 10, label: "Day 10", date: "Wed 30 Jun", title: "Free day in Chamonix", info: "Breakfast only; lunch and dinner on your own.",
+    stops: [["Chamonix", 45.9237, 6.8694, "~3,400 ft · free day"]] },
+  { d: 11, label: "Day 11", date: "Thu 1 Jul", title: "Departure", info: "Breakfast only. Airport taxi not included.",
+    stops: [["Chamonix", 45.9237, 6.8694, "departure"]] }
+];
+
+const STAYS = {
+  0: ["Chalet Hôtel La Sapinière, Chamonix", "https://chalethotelsapinierechamonix.com/en"],
+  1: ["Chalet Hôtel La Sapinière, Chamonix", "https://chalethotelsapinierechamonix.com/en"],
+  2: ["Hotel Chemenaz, Les Contamines", "https://www.chemenaz.com/en"],
+  3: ["Hotel Base Camp Lodge, Bourg-Saint-Maurice", "https://www.hotel-basecamplodge.com/fr/"],
+  4: ["Hotel Croux, Courmayeur", "https://www.hotelcroux.it/"],
+  5: ["Hotel Croux, Courmayeur", "https://www.hotelcroux.it/"],
+  6: ["Hotel Sunways, Champex-Lac", "https://www.sunways.ch/"],
+  7: ["Campanile, Martigny", "https://martigny.campanile.com/fr-fr/"],
+  8: ["Chalet Hôtel La Sapinière, Chamonix", "https://chalethotelsapinierechamonix.com/en"],
+  9: ["Chalet Hôtel La Sapinière, Chamonix", "https://chalethotelsapinierechamonix.com/en"],
+  10: ["Chalet Hôtel La Sapinière, Chamonix", "https://chalethotelsapinierechamonix.com/en"]
+};
+const TRACKS = {
+  2: "https://www.komoot.fr/tour/957599408?share_token=aWdWIHNjYA4IwN4A4l36aSfzjkeTirVVXuXZ8TWXkXXKDhfQaB&ref=wtd",
+  3: "https://www.komoot.com/fr-fr/tour/3345425114?share_token=aCfb2zWwz5DcODj5krg6GfyTdMtBrphWo0PHmTPGrjMScOS9Dh&ref=wtd",
+  4: "https://www.komoot.com/fr-fr/tour/2691697989?share_token=a6VhnmVLCccz1FT1nNSbsUQYfg0crg5vs478mXBKlfgEE5HR1C&ref=wtd",
+  6: "https://www.komoot.com/fr-fr/tour/1891013792?share_token=a6pnTrr8w3c067CygoQPbl1Plycx65hcJcm4iDyubRwttI800a&ref=wtd",
+  7: "https://www.komoot.com/fr-fr/tour/1891034425?share_token=aEYBqExWWrx76AdBhDacOZnyydIwQuVjD3AHg7oP7MPRSYwLxw&ref=wtd",
+  8: "https://www.komoot.com/fr-fr/tour/1891047036?share_token=ar4ZxJFcvd6t0ewRH01IkidnZPFU5FH9HJFzGaXeqMeSaRddTg&ref=wtd",
+  9: "https://www.komoot.com/fr-fr/tour/3356569904?share_token=aaAnSybKMYgYXerr7vhPiPuzy1336KnU37c9yrJES8Z2m9JxY6&ref=wtd"
+};
+const EXTRAS = {
+  5: [["QC Terme Pré-Saint-Didier spa", "https://www.qcterme.com/it/destinazioni/pre-saint-didier/qc-spa-pre-saint-didier/orari-e-prezzi-ps"],
+      ["Skyway Monte Bianco", "https://www.montebianco.com/en"]]
+};
+
+// Country of each stop, by day (FR / IT / CH)
+const FLAG_SVG = {
+  FR: '<svg class="flag" viewBox="0 0 3 2"><rect width="1" height="2" fill="#002395"/><rect x="1" width="1" height="2" fill="#fff"/><rect x="2" width="1" height="2" fill="#ED2939"/></svg>',
+  IT: '<svg class="flag" viewBox="0 0 3 2"><rect width="1" height="2" fill="#009246"/><rect x="1" width="1" height="2" fill="#fff"/><rect x="2" width="1" height="2" fill="#CE2B37"/></svg>',
+  CH: '<svg class="flag" viewBox="0 0 30 20"><rect width="30" height="20" fill="#DA291C"/><rect x="13" y="4" width="4" height="12" fill="#fff"/><rect x="9" y="8" width="12" height="4" fill="#fff"/></svg>'
+};
+const CNAME = { FR: "France", IT: "Italy", CH: "Switzerland" };
+const STOP_CC = {
+  0: ["FR"], 1: ["FR"], 2: ["FR","FR","FR"], 3: ["FR","FR","FR","FR","FR"],
+  4: ["FR","FR|IT","IT","IT"], 5: ["IT"], 6: ["IT","IT|CH","CH","CH"],
+  7: ["CH","CH","CH","CH","CH"], 8: ["CH","CH|FR","FR","FR"], 9: ["FR","FR"], 10: ["FR"], 11: ["FR"]
+};
+const dayCountries = d => [...new Set(STOP_CC[d].flatMap(c => c.split("|")))];
+const flagsFor = d => dayCountries(d).map(c => FLAG_SVG[c]).join("");
+
+// What the trip price covers each day (from the organizer's proposal, Nov 2026 version)
+const COST = {
+  0: { inc: ["Hotel night in Chamonix"], exc: ["Breakfast, lunch, dinner", "Airport transfer"] },
+  1: { inc: ["Hotel night in Chamonix", "Meeting & gear check with guide"], exc: ["Breakfast, lunch, dinner", "Airport transfer"] },
+  2: { inc: ["2 guides", "Breakfast, lunch box, dinner", "Hotel in Les Contamines", "Luggage transfer"],
+       exc: ["Train/bus Chamonix → Les Houches", "Bellevue cable car <small>(~€19)</small>", "Drinks"] },
+  3: { inc: ["2 guides", "Breakfast, lunch box, dinner", "Hotel in Bourg-Saint-Maurice", "Taxi Les Chapieux → Bourg-St-Maurice", "Luggage transfer"],
+       exc: ["Drinks"] },
+  4: { inc: ["2 guides", "Breakfast, lunch box, dinner", "Hotel in Courmayeur", "Taxi to Ville des Glaciers", "Transfer Val Veny → Courmayeur", "Luggage transfer"],
+       exc: ["Drinks"] },
+  5: { inc: ["Breakfast", "Hotel in Courmayeur"], exc: ["Lunch, dinner", "Spa / Skyway / other activities", "Drinks"] },
+  6: { inc: ["2 guides", "Breakfast, lunch box, dinner", "Hotel in Champex-Lac", "Transfer Courmayeur → Arnouva", "Taxi/bus Ferret → Champex-Lac", "Luggage transfer"],
+       exc: ["Drinks"] },
+  7: { inc: ["2 guides", "Breakfast, lunch box, dinner", "Hotel in Martigny", "Taxi Col de la Forclaz/Trient → Martigny", "Luggage transfer"],
+       exc: ["Drinks"] },
+  8: { inc: ["2 guides", "Breakfast, lunch box, dinner", "Hotel in Chamonix", "Taxi Martigny → Trient", "Bus Le Tour → Chamonix", "Luggage transfer"],
+       exc: ["Drinks"] },
+  9: { inc: ["2 guides", "Breakfast, lunch box, dinner", "Hotel in Chamonix"], exc: ["Gondolas up to La Flégère and down from Planpraz", "Drinks"] },
+  10: { inc: ["Breakfast", "Hotel in Chamonix"], exc: ["Lunch, dinner", "Activities", "Drinks"] },
+  11: { inc: ["Breakfast"], exc: ["Taxi to the airport", "Lunch, dinner"] }
+};
+const ALWAYS_EXC = "Every day: mountain rescue insurance, personal expenses, and any extra transfers due to bad weather (paid on the spot).";
+
+function countryHtml(d) {
+  const seq = [];
+  STOP_CC[d].forEach(c => c.split("|").forEach(x => { if (seq[seq.length - 1] !== x) seq.push(x); }));
+  const crossing = seq.length > 1;
+  return `<div class="country">${seq.map(c => `${FLAG_SVG[c]}<span>${CNAME[c]}</span>`).join('<span class="arrow">→</span>')}${crossing ? '<span class="arrow" style="font-size:.8rem;width:100%">Border crossing on foot today</span>' : ""}</div>`;
+}
+function costHtml(d) {
+  const c = COST[d]; if (!c) return "";
+  const li = a => a.map(x => `<li>${x}</li>`).join("");
+  return `<div class="cost"><div class="inc"><h3>Included</h3><ul>${li(c.inc)}</ul></div><div class="exc"><h3>Not included</h3><ul>${li(c.exc)}</ul></div></div>
+    <div class="meta" style="font-size:.78rem">${ALWAYS_EXC}</div>`;
+}
+const ext = (url, text) => `<a href="${url}" target="_blank" rel="noopener">${text} ↗</a>`;
+
+const map = L.map("map", { scrollWheelZoom: false });
+L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+  maxZoom: 16, attribution: 'Map data © OpenStreetMap contributors, SRTM | Style © OpenTopoMap | Trails: BRouter'
+}).addTo(map);
+
+const all = days.flatMap(d => d.stops.map(s => [s[1], s[2]]));
+let layer = L.layerGroup().addTo(map);
+const fmt = n => n.toLocaleString("en-US");
+const COLORS = ["#e11d48","#ea580c","#ca8a04","#16a34a","#0d9488","#0284c7","#4f46e5","#9333ea","#92400e","#475569","#65a30d","#78716c"];
+const icon = (t, dim, color) => L.divIcon({ className: "", html: `<div class="pin${dim ? " dim" : ""}" style="background:${color}">${t}</div>`,
+  iconSize: dim ? [30, 19] : [38, 24], iconAnchor: dim ? [15, 10] : [19, 12] });
+
+function linksHtml(d) {
+  const parts = [];
+  if (STAYS[d]) parts.push(`<div><span class="lbl">Overnight</span>🏨 ${ext(STAYS[d][1], STAYS[d][0])} <small style="color:var(--muted)">or equivalent</small></div>`);
+  if (TRACKS[d]) parts.push(`<div><span class="lbl">Trail</span>🥾 ${ext(TRACKS[d], "View route on Komoot")}</div>`);
+  if (EXTRAS[d]) parts.push(`<div><span class="lbl">Options</span>${EXTRAS[d].map(e => ext(e[1], e[0])).join("<br>")}</div>`);
+  return parts.length ? `<div class="links" style="margin:0 0 12px;border-top:0;padding-top:0">${parts.join("")}</div>` : "";
+}
+
+// Index of the last stop reached on foot each day; later stops (and the link from the previous night) are taxi/bus/lift.
+const HIKE_UPTO = { 2: 2, 3: 3, 4: 2, 6: 2, 7: 3, 8: 2, 9: 1 };
+const TRAILS = {}, TRAIL_STATE = {};
+let current = 0;
+
+function loadTrail(d) {
+  if (TRAIL_STATE[d]) return;
+  const key = "tmb-trail-v1-" + d;
+  try { const c = JSON.parse(localStorage.getItem(key) || "null"); if (c) { TRAILS[d] = c; TRAIL_STATE[d] = "ok"; return; } } catch (e) {}
+  const day = days.find(x => x.d === d);
+  const wps = day.stops.slice(0, HIKE_UPTO[d] + 1).map(s => `${s[2]},${s[1]}`).join("|");
+  TRAIL_STATE[d] = "loading";
+  fetch(`https://brouter.de/brouter?lonlats=${wps}&profile=hiking-mountain&alternativeidx=0&format=geojson`)
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(g => {
+      const f = g.features[0];
+      TRAILS[d] = { line: f.geometry.coordinates.map(c => [c[1], c[0]]), km: +f.properties["track-length"] / 1000 };
+      TRAIL_STATE[d] = "ok";
+      try { localStorage.setItem(key, JSON.stringify(TRAILS[d])); } catch (e) {}
+    })
+    .catch(() => { TRAIL_STATE[d] = "failed"; })
+    .finally(() => show(current, false));
+}
+
+const TRAIL_COLOR = "#e600ff";   // hiking trail: vivid magenta, stands out on the topo map
+const RIDE_COLOR = "#0047ff";    // taxi, bus, lift: electric blue dots
+function drawLine(pts, opts) {
+  // white halo underneath so the line pops at any zoom
+  L.polyline(pts, { color: "#fff", weight: opts.weight + 4, opacity: .9, lineCap: "round", dashArray: opts.dashArray }).addTo(layer);
+  return L.polyline(pts, { opacity: 1, lineCap: "round", lineJoin: "round", ...opts }).addTo(layer);
+}
+
+
+// ---- Photos: pulled live from Wikimedia Commons, nearest geotagged photos to each point ----
+const PHOTO_CACHE = {}, PHOTO_WAIT = {};
+const stripHtml = h => { const d = document.createElement("div"); d.innerHTML = h || ""; return (d.textContent || "").trim(); };
+// Commons geotags include satellite / space-station shots of the ground below, maps and diagrams: skip those.
+// Space / satellite shots of the ground below: checked against title, description and categories.
+const SPACE_SHOT = /(\bISS0?\d|international space station|\bexpedition \d+|astronaut|from space|from orbit|sentinel-?\d|landsat|\bmodis\b|earth observation|spacecraft|space shuttle|\bsts-\d)/i;
+// Maps, logos and the like: checked against title and description only (Commons adds "Pages with maps" to every geotagged file's categories).
+// Dead animals and close-up wildlife/specimen shots: checked against title, description and categories.
+const NOT_SCENERY = /\b(dead|carcass|cadaver|corpse|roadkill|remains|skeleton|skull|cadavre|mort|morte|kadaver|tote[rs]?|carcassa|birds?|aves|oiseaux?|vögel|uccell[oi]|insects?|insecta|butterfl(y|ies)|moths?|lepidoptera|beetles?|coleoptera|spiders?|araneae|diptera|hymenoptera|fungi|mushrooms?|specimens?)\b/i;
+const NOT_A_PHOTO = /\b(map|carte|karte|mappa|diagram|logo|coat of arms|blason|wappen|stemma)\b/i;
+const HIDDEN = (() => { try { return new Set(JSON.parse(localStorage.getItem("tmb-photos-hidden") || "[]")); } catch (e) { return new Set(); } })();
+function hidePhoto(page) {
+  HIDDEN.add(page);
+  try { localStorage.setItem("tmb-photos-hidden", JSON.stringify([...HIDDEN])); } catch (e) {}
+}
+const visible = list => list ? list.filter(ph => !HIDDEN.has(ph.page)) : list;
+
+function getPhotos(lat, lon, name = "") {
+  const key = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+  if (PHOTO_CACHE[key]) return Promise.resolve(visible(PHOTO_CACHE[key]));
+  if (PHOTO_WAIT[key]) return PHOTO_WAIT[key].then(visible);
+  try { const c = JSON.parse(localStorage.getItem("tmb-photos-v5-" + key) || "null"); if (c) return Promise.resolve(visible(PHOTO_CACHE[key] = c)); } catch (e) {}
+  // words from the place name, used to rank photos that mention it first
+  const words = name.replace(/^[\d.]+\s*/, "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .split(/[^a-z]+/).filter(w => w.length > 3 && !["col", "lac", "des", "les", "hotel", "cable", "car", "top"].includes(w));
+  const url = "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*" +
+    `&generator=geosearch&ggsnamespace=6&ggscoord=${lat}|${lon}&ggsradius=3000&ggslimit=50` +
+    "&prop=imageinfo&iiprop=url|mime|extmetadata|size&iiurlwidth=480" +
+    "&iiextmetadatafilter=Artist|LicenseShortName|ObjectName|Categories|ImageDescription|Credit";
+  return PHOTO_WAIT[key] = fetch(url).then(r => r.json()).then(j => {
+    const pages = Object.values((j.query && j.query.pages) || {}).sort((a, b) => (a.index || 0) - (b.index || 0));
+    const list = pages.map(pg => {
+      const ii = (pg.imageinfo || [])[0]; if (!ii || ii.mime !== "image/jpeg" || !ii.thumburl) return null;
+      if (ii.width && ii.height && (ii.width < 640 || ii.height < 400)) return null;
+      const m = ii.extmetadata || {}, v = k => stripHtml(m[k] && m[k].value);
+      const own = [pg.title, v("ObjectName"), v("ImageDescription")].join(" | ");
+      const text = [own, v("Categories")].join(" | ");
+      if (SPACE_SHOT.test(text) || NOT_A_PHOTO.test(own) || NOT_SCENERY.test(text)) return null;
+      const t = text.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+      return { thumb: ii.thumburl, big: ii.thumburl.replace(/\/\d+px-/, "/1280px-"), orig: ii.url, page: ii.descriptionurl,
+               title: v("ObjectName") || pg.title.replace(/^File:|\.\w+$/g, ""),
+               credit: [v("Artist"), m.LicenseShortName && m.LicenseShortName.value].filter(Boolean).join(" · "),
+               score: words.filter(w => t.includes(w)).length, idx: pg.index || 0 };
+    }).filter(Boolean)
+      .sort((a, b) => b.score - a.score || a.idx - b.idx)   // named-place matches first, then nearest
+      .slice(0, 12).map(({ score, idx, ...ph }) => ph);
+    PHOTO_CACHE[key] = list;
+    try { localStorage.setItem("tmb-photos-v5-" + key, JSON.stringify(list)); } catch (e) {}
+    return visible(list);
+  }).catch(() => null);
+}
+function imgTag(ph, k, extra = "") {
+  return `<img src="${ph.thumb}" alt="${ph.title.replace(/"/g, "&quot;")}" loading="lazy" data-k="${k}" ${extra}>`;
+}
+let LB_LIST = [], LB_NAME = "";
+function openLightbox(list, idx, name) {
+  LB_LIST = list; LB_NAME = name;
+  const ph = list[idx], lb = document.getElementById("lb");
+  const im = lb.querySelector("img");
+  im.onerror = () => { im.onerror = null; im.src = ph.orig; };
+  im.src = ph.big;
+  lb.querySelector(".cap").innerHTML = `<b>${name}</b> · photo ${idx + 1} of ${list.length}<br>${ph.title}<br>
+    <span class="cr">${ph.credit || ""} · <a href="${ph.page}" target="_blank" rel="noopener">Wikimedia Commons ↗</a></span>`;
+  lb.dataset.idx = idx; lb.classList.add("on");
+}
+function wireThumbs(el, list, name) {
+  el.querySelectorAll("img").forEach(im => im.onclick = () => openLightbox(list, +im.dataset.k, name));
+}
+function fillPanelPhotos() {
+  document.querySelectorAll("#panel .thumbs").forEach(el => {
+    const lat = +el.dataset.lat, lon = +el.dataset.lon, name = el.dataset.name;
+    getPhotos(lat, lon, name).then(list => {
+      if (!el.isConnected) return;
+      if (list === null) { el.innerHTML = '<span class="none">Photos unavailable</span>'; return; }
+      if (!list.length) { el.innerHTML = '<span class="none">No nearby photos found</span>'; return; }
+      el.innerHTML = list.map((ph, k) => imgTag(ph, k)).join("");
+      wireThumbs(el, list, name);
+    });
+  });
+}
+
+function show(i, refit = true) {
+  current = i;
+  document.querySelectorAll(".tab").forEach((t, j) => t.classList.toggle("active", j === i));
+  layer.clearLayers();
+  const day = days[i];
+  const pts = [];
+  let prevEnd = null;
+  days.slice(0, i + 1).forEach((dd, j) => {
+    const color = COLORS[j % COLORS.length], cur = j === i;
+    const stopPts = dd.stops.map(s => [s[1], s[2]]);
+    const style = { color: TRAIL_COLOR, weight: cur ? 6 : 4.5 };
+    const ride = { color: RIDE_COLOR, weight: cur ? 3.5 : 3, dashArray: "1 8" };
+    if (prevEnd) drawLine([prevEnd, stopPts[0]], ride).addTo(layer);
+    const h = HIKE_UPTO[dd.d];
+    if (h !== undefined) {
+      loadTrail(dd.d);
+      if (TRAILS[dd.d]) drawLine(TRAILS[dd.d].line, style).addTo(layer);
+      else drawLine(stopPts.slice(0, h + 1), { ...style, dashArray: "8 6" }).addTo(layer);
+      if (stopPts.length > h + 1) drawLine(stopPts.slice(h), ride).addTo(layer);
+    } else if (stopPts.length > 1) drawLine(stopPts, ride).addTo(layer);
+    dd.stops.forEach((s, k) => {
+      pts.push([s[1], s[2]]);
+      L.marker([s[1], s[2]], { icon: icon(`${dd.d}.${k + 1}`, !cur, color), zIndexOffset: cur ? 1000 : j * 10 })
+        .bindPopup(`<b>${dd.d}.${k + 1} ${s[0]}</b><br>${dd.label} · ${s[3]}` + (k === dd.stops.length - 1 && STAYS[dd.d] && dd.d !== 9 ? `<br>🏨 ${ext(STAYS[dd.d][1], STAYS[dd.d][0])}` : "") + `<div class="pthumb" data-lat="${s[1]}" data-lon="${s[2]}" data-name="${dd.d}.${k + 1} ${s[0]}"></div>`, { maxWidth: 240 }).addTo(layer);
+    });
+    prevEnd = stopPts[stopPts.length - 1];
+  });
+  if (refit) { if (pts.length > 1) map.fitBounds(pts, { padding: [40, 40], maxZoom: 13 }); else map.setView(pts[0], 12); }
+
+  const st = TRAIL_STATE[day.d];
+  const trailNote = HIKE_UPTO[day.d] === undefined ? "" :
+    st === "ok" ? `<div class="meta">🥾 Trail mapped from OpenStreetMap paths (~${(TRAILS[day.d].km * 0.621).toFixed(1)} mi through these points). Blue dots = taxi, bus or lift.</div>` :
+    st === "failed" ? `<div class="meta">⚠️ Couldn't load the trail, so showing straight lines. Use the Komoot link for the real path.</div>` :
+    `<div class="meta">Loading trail…</div>`;
+  const chips = day.mi ? `<div class="chips"><span class="chip">${day.mi} mi</span><span class="chip">↑ ${fmt(day.up)} ft</span><span class="chip">↓ ${fmt(day.down)} ft</span><span class="chip">${day.hrs}</span></div>` : "";
+  document.getElementById("panel").innerHTML =
+    `<h2>${day.label} · ${day.date}: ${day.title}</h2>${countryHtml(day.d)}<div class="meta">${day.info}</div>${chips}${costHtml(day.d)}
+     ${trailNote}${linksHtml(day.d)}<ol style="list-style:none;padding:0">${day.stops.map((s,k) => `<li><span class="dot" style="background:${COLORS[i]}"></span><b>${day.d}.${k+1}</b> ${s[0]} ${STOP_CC[day.d][k].split("|").map(c => FLAG_SVG[c]).join("")}<small style="margin-left:16px">${s[3]}</small></li>`).join("")}</ol>`;
+}
+
+const tabs = document.getElementById("tabs");
+days.forEach((d, i) => {
+  const b = document.createElement("button");
+  b.className = "tab"; b.innerHTML = `<span class="dot" style="background:${COLORS[i]}"></span>${d.label} <small style="opacity:.75">${d.date.slice(4)}</small>${flagsFor(d.d)}`; b.onclick = () => show(i);
+  tabs.appendChild(b);
+});
+
+const tb = document.getElementById("tbody");
+let tm = 0, tu = 0, td = 0;
+days.filter(d => d.mi).forEach(d => {
+  tm += d.mi; tu += d.up; td += d.down;
+  tb.insertAdjacentHTML("beforeend", `<tr data-i="${days.indexOf(d)}"><td><span class="dot" style="background:${COLORS[days.indexOf(d)]}"></span>${d.d}<br><small style="color:var(--muted);white-space:nowrap">${d.date.slice(4)}</small></td><td class="table-flags">${flagsFor(d.d)}</td><td>${d.title}</td><td class="n">${d.mi} mi</td><td class="n">${fmt(d.up)} ft</td><td class="n">${fmt(d.down)} ft</td><td class="n">${d.high}</td><td>${STAYS[d.d] ? ext(STAYS[d.d][1], STAYS[d.d][0].split(/[,(]/)[0].trim()) : ""}</td></tr>`);
+});
+tb.insertAdjacentHTML("beforeend", `<tr><td></td><td></td><td>Total</td><td class="n">~54 mi</td><td class="n">~18,500 ft</td><td class="n">~17,260 ft</td><td></td><td></td></tr>`);
+
+map.fitBounds(all, { padding: [30, 30] });
+show(0);
+</script>
+<script>
+const gal = document.getElementById("gal"), strip = gal.querySelector(".gal-strip");
+const galIdx = () => Math.round(strip.scrollLeft / Math.max(strip.clientWidth, 1));
+function galUpdate() {
+  const n = strip.children.length, i = galIdx();
+  gal.querySelector(".gal-count").textContent = n ? `${i + 1} / ${n}` : "";
+  gal.querySelector(".prev").hidden = i <= 0; gal.querySelector(".next").hidden = i >= n - 1;
+}
+function openGallery(list, name, start = 0) {
+  gal.querySelector(".gal-title").textContent = name;
+  strip.innerHTML = list.map(ph => `<div class="gal-slide"><div class="ph"><img src="${ph.thumb}" data-big="${ph.big}" data-orig="${ph.orig}" alt=""></div>
+    <div class="cap">${ph.title}<br>${ph.credit ? ph.credit + " · " : ""}<a href="${ph.page}" target="_blank" rel="noopener">Wikimedia Commons ↗</a>
+    · <button class="gal-hide" data-page="${ph.page}">Not this place? Hide</button></div></div>`).join("");
+  strip.querySelectorAll(".gal-hide").forEach(btn => btn.onclick = () => {
+    hidePhoto(btn.dataset.page);
+    btn.closest(".gal-slide").remove();
+    if (!strip.children.length) closeGallery(); else galUpdate();
+  });
+  // upgrade to larger images (fall back to the original file if that size doesn't exist)
+  strip.querySelectorAll("img").forEach(im => {
+    const big = new Image(); big.onload = () => { im.src = big.src; };
+    big.onerror = () => { const o = new Image(); o.onload = () => { im.src = o.src; }; o.src = im.dataset.orig; };
+    big.src = im.dataset.big;
+  });
+  gal.classList.add("on"); gal.setAttribute("aria-hidden", "false");
+  strip.style.scrollBehavior = "auto"; strip.scrollLeft = start * strip.clientWidth; strip.style.scrollBehavior = "";
+  galUpdate();
+}
+const closeGallery = () => { gal.classList.remove("on"); gal.setAttribute("aria-hidden", "true"); strip.innerHTML = ""; };
+const galGo = d => { strip.scrollTo({ left: (galIdx() + d) * strip.clientWidth }); };
+strip.addEventListener("scroll", () => requestAnimationFrame(galUpdate));
+gal.querySelector(".gal-x").onclick = closeGallery;
+gal.querySelector(".prev").onclick = () => galGo(-1);
+gal.querySelector(".next").onclick = () => galGo(1);
+document.addEventListener("keydown", ev => {
+  if (!gal.classList.contains("on")) return;
+  if (ev.key === "Escape") closeGallery(); if (ev.key === "ArrowRight") galGo(1); if (ev.key === "ArrowLeft") galGo(-1);
+});
+window.addEventListener("resize", () => { if (gal.classList.contains("on")) { strip.style.scrollBehavior = "auto"; galUpdate(); } });
+
+// ---- Photos on/off toggle (map control, remembered in this browser) ----
+let PHOTOS_ON = false;   // off by default; turning it on is remembered in this browser
+try { PHOTOS_ON = localStorage.getItem("tmb-photos-on-v2") === "1"; } catch (e) {}
+const PhotoToggle = L.Control.extend({
+  options: { position: "topright" },
+  onAdd() {
+    const b = L.DomUtil.create("button", "photo-toggle");
+    b.type = "button";
+    L.DomEvent.disableClickPropagation(b);
+    b.onclick = () => setPhotos(!PHOTOS_ON);
+    this._b = b; return b;
+  }
+});
+const photoToggle = new PhotoToggle().addTo(map);
+function setPhotos(on) {
+  PHOTOS_ON = on;
+  try { localStorage.setItem("tmb-photos-on-v2", on ? "1" : "0"); } catch (e) {}
+  const b = photoToggle._b;
+  b.classList.toggle("off", !on);
+  b.setAttribute("aria-pressed", on);
+  b.innerHTML = `<span class="pt-icon">📷</span> Photos <span class="pt-state">${on ? "On" : "Off"}</span>`;
+  b.title = on ? "Hide photos in the map pop-ups" : "Show photos in the map pop-ups";
+  if (!on) closeGallery();
+  map.closePopup();
+}
+setPhotos(PHOTOS_ON);
+
+map.on("popupopen", e => {
+  const el = e.popup.getElement().querySelector(".pthumb"); if (!el) return;
+  if (!PHOTOS_ON) { el.innerHTML = ""; return; }
+  getPhotos(+el.dataset.lat, +el.dataset.lon, el.dataset.name).then(list => {
+    if (!list || !list.length) {
+      el.innerHTML = `<div class="cr" style="margin-top:6px">${list ? "No photos found near this point." : "Couldn't load photos right now."}</div>`;
+      return;
+    }
+    el.innerHTML = imgTag(list[0], 0) + `<div class="cr">${list[0].credit || ""} · Wikimedia Commons</div>` +
+      `<span class="more">📷 ${list.length > 1 ? `See all ${list.length} photos` : "View larger"} →</span>`;
+    el.onclick = () => { map.closePopup(); openGallery(list, el.dataset.name); };
+    const relayout = () => { try { e.popup._updateLayout(); e.popup._updatePosition(); e.popup._adjustPan(); } catch (err) {} };
+    relayout(); el.querySelector("img").onload = relayout;
+  });
+});
+// close the gallery when switching days
+document.getElementById("tabs").addEventListener("click", closeGallery);
+</script>
+<script>
+function setView(v) {
+  document.querySelectorAll(".view").forEach(b => { const on = b.dataset.view === v; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+  document.getElementById("view-map").hidden = v !== "map";
+  document.getElementById("view-data").hidden = v !== "data";
+  document.getElementById("view-gear").hidden = v !== "gear";
+  document.getElementById("map-note").hidden = v === "gear";
+  if (v === "map") setTimeout(() => map.invalidateSize(), 0); else closeGallery();
+}
+document.querySelectorAll(".view").forEach(b => b.onclick = () => setView(b.dataset.view));
+document.getElementById("tbody").addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-i]"); if (!tr || e.target.closest("a")) return;
+  setView("map"); show(+tr.dataset.i); window.scrollTo({ top: document.querySelector(".views").offsetTop - 8, behavior: "smooth" });
+});
+</script>
+<script>
+// ---- Gear checklist (from the organizer's proposal) ----
+const GEAR = [
+  { id: "pack", title: "🎒 On you / in your daypack", sub: "What you hike with every day", items: [
+    "Hat and buff (head band)", "Sunglasses", "Fleece (polar) jacket", "Wind- and waterproof jacket", "Light down jacket", "Gloves",
+    "Long pants and waterproof pants", "High hiking boots, over the ankle, Vibram sole, not too rigid", "Headlamp", "Hiking poles",
+    "Backpack, 40 liters", "Rain cover for your backpack", "Water bottle 1–1.5 L or hydration bladder, plus thermos",
+    "Snacks (chocolate, power bars)", "Small personal washbag", "Personal first-aid kit and medicines", "Water purification tablets" ] },
+  { id: "duffel", title: "🧳 In your duffel bag", sub: "Travels hotel to hotel with the luggage transfer", items: [
+    "4 T-shirts (3 short-sleeve, 1 warmer long-sleeve)", "2 pairs of long pants and waterproof pants", "2 pairs of shorts",
+    "4 pairs of good hiking socks, higher than your boots", "Rain poncho", "Silk sleeping-bag liner", "Towel", "Personal washbag",
+    "Underwear", "Town clothes (e.g. for the rest day in Courmayeur)", "Tennis shoes", "Flip-flops", "Small 10 L backpack",
+    "Fork and spoon", "Microspikes" ] }
+];
+const GKEY = "tmb-gear-v1";
+let GSTATE = { checked: {}, extra: { pack: [], duffel: [] } };
+try { const g = JSON.parse(localStorage.getItem(GKEY) || "null"); if (g) GSTATE = { checked: g.checked || {}, extra: Object.assign({ pack: [], duffel: [] }, g.extra || {}) }; } catch (e) {}
+const gsave = () => { try { localStorage.setItem(GKEY, JSON.stringify(GSTATE)); } catch (e) {} };
+const esc = t => t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function renderGear() {
+  let total = 0, done = 0;
+  document.getElementById("gear-cols").innerHTML = GEAR.map(g => {
+    const items = g.items.map((t, k) => ({ id: `${g.id}:${k}`, t, own: false }))
+      .concat(GSTATE.extra[g.id].map((t, k) => ({ id: `${g.id}:x:${t}`, t, own: true, k })));
+    const n = items.filter(it => GSTATE.checked[it.id]).length;
+    total += items.length; done += n;
+    return `<div class="gcard"><span class="gcount">${n}/${items.length}</span><h3>${g.title}</h3><div class="gsub">${g.sub}</div>
+      ${items.map(it => `<label class="gitem${GSTATE.checked[it.id] ? " done" : ""}">
+        <input type="checkbox" data-id="${esc(it.id)}"${GSTATE.checked[it.id] ? " checked" : ""}><span>${esc(it.t)}</span>
+        ${it.own ? `<span class="tag">added</span><button class="del" title="Remove" data-g="${g.id}" data-k="${it.k}">×</button>` : ""}</label>`).join("")}
+      <form class="gadd" data-g="${g.id}"><input placeholder="Add your own item…" maxlength="80"><button class="gbtn">Add</button></form></div>`;
+  }).join("");
+  document.getElementById("gear-progress").textContent = `${done} of ${total} packed${done === total && total ? " ✅" : ""}`;
+  document.getElementById("gear-bar").style.width = total ? (100 * done / total) + "%" : "0";
+  document.getElementById("gear-badge").textContent = done ? `${done}/${total}` : "";
+}
+const gcols = document.getElementById("gear-cols");
+gcols.addEventListener("change", e => {
+  if (!e.target.matches("input[type=checkbox]")) return;
+  const id = e.target.dataset.id;
+  if (e.target.checked) GSTATE.checked[id] = 1; else delete GSTATE.checked[id];
+  gsave(); renderGear();
+});
+gcols.addEventListener("click", e => {
+  const b = e.target.closest(".del"); if (!b) return;
+  e.preventDefault();
+  const g = b.dataset.g, k = +b.dataset.k, t = GSTATE.extra[g][k];
+  delete GSTATE.checked[`${g}:x:${t}`]; GSTATE.extra[g].splice(k, 1); gsave(); renderGear();
+});
+gcols.addEventListener("submit", e => {
+  e.preventDefault();
+  const f = e.target, inp = f.querySelector("input"), t = inp.value.trim(), g = f.dataset.g;
+  if (t && !GSTATE.extra[g].includes(t)) { GSTATE.extra[g].push(t); gsave(); renderGear(); }
+  const again = document.querySelector(`.gadd[data-g="${g}"] input`); if (again) again.focus();
+});
+document.getElementById("gear-reset").onclick = () => {
+  if (!Object.keys(GSTATE.checked).length) return;
+  GSTATE.checked = {}; gsave(); renderGear();
+};
+renderGear();
+</script>
+</body>
+</html>
